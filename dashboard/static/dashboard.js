@@ -9,6 +9,7 @@ const blue = "#2854bf";
 const teal = "#138378";
 const textColor = "#53637a";
 const formatCount = value => compact.format(value);
+const bundledMode = document.body.dataset.mode === "snapshot";
 
 const charts = {};
 const resizeCharts = new ResizeObserver(entries => {
@@ -218,7 +219,7 @@ async function loadOffline() {
     byId("total-users").textContent = number.format(summary.user_count);
     const months = data.monthly.map(row => row.month);
     byId("date-range").textContent = `${months[0]} — ${months.at(-1)}`;
-    byId("offline-status").textContent = "HDFS 离线快照";
+    byId("offline-status").textContent = bundledMode ? "已完成的项目结果" : "HDFS 离线快照";
     chart("trend-chart").setOption({ ...baseChart(), xAxis: categoryAxis(months),
       yAxis: valueAxis(value => compact.format(value)),
       series: [{ type: "line", name: "评分数", data: data.monthly.map(row => row.rating_count),
@@ -329,7 +330,9 @@ async function refreshRealtime() {
       drawRealtime(snapshot.windows);
       lastWindows = key;
     }
-    if (!snapshot.kafka_reachable) {
+    if (snapshot.snapshot_source === "bundled") {
+      setConnection("online", "本地结果快照", "已归档的历史回放 · UTC");
+    } else if (!snapshot.kafka_reachable) {
       setConnection("stale", "Kafka 不可达", "显示最近快照 · 每 5 秒重试");
     } else if (snapshot.snapshot_source === "cache") {
       setConnection("stale", "快照缓存", "HDFS 暂不可达 · 显示最近快照");
@@ -379,4 +382,4 @@ loadHourly();
 loadMovieScores();
 loadRecommendations(byId("user-id").value);
 refreshRealtime();
-setInterval(refreshRealtime, 5000);
+if (!bundledMode) setInterval(refreshRealtime, 5000);

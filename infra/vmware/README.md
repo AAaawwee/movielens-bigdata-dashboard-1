@@ -24,6 +24,6 @@ bash scripts/resume-from-clean.sh --run
 
 `--check` 只读取 HDFS，核对三份原始文件和三个清洗结果目录。`--run` 建立 Hive 外部表并补齐离线统计、ALS 推荐和实时快照。执行过程中沿用已有的完整结果。若启动时已经存在 Streaming checkpoint 或批次目录，但缺少最终快照，请保留原状态并核对是否还是原 Kafka 主题；确认后可用 `pipeline/streaming/run-stage5.sh stream` 从原 checkpoint 继续。
 
-3. 看到 `DASHBOARD_RESULTS_OK` 后，按 [仓库首页的宿主机启动步骤](../../README.md#4-在宿主机启动看板) 打开看板。已有所有结果时也可以直接启动看板。若 Kafka broker 尚未启动，页面仍可从 HDFS 读取最近快照。
+3. 看到 `DASHBOARD_RESULTS_OK` 后，按 [连接现有集群](../../docs/deployment.md#连接现有集群) 打开看板。已有所有结果时也可以直接启动看板。若 Kafka broker 尚未启动，页面仍可从 HDFS 读取最近快照。
 
 VMX 文件可随仓库克隆。包含 MovieLens 原始及清洗数据的磁盘由有权分发的课程渠道提供。持有同批镜像的同学可以跳过数据下载与清洗。 [MovieLens 数据使用许可](https://files.grouplens.org/datasets/movielens/ml-1m-README.txt)

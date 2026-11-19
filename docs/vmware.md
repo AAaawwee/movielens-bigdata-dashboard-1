@@ -53,7 +53,7 @@ done
 
 ### 2.2 Hadoop 配置和启动
 
-以 `hadoop` 在 NameNode 按[仓库首页的命令](../README.md#2-克隆仓库)克隆仓库并进入项目目录。在三台分别下载并解压 [Hadoop 3.2.0 发行包](https://archive.apache.org/dist/hadoop/common/hadoop-3.2.0/) 到 `~/hadoop-3.2.0`。NameNode 额外将 [Spark 3.1.2 Hadoop 3.2 发行包](https://archive.apache.org/dist/spark/spark-3.1.2/) 解压到 `~/spark-3.1.2-bin-hadoop3.2`，将 [Hive 3.1.2 发行包](https://archive.apache.org/dist/hive/hive-3.1.2/) 解压到 `~/software/apache-hive-3.1.2-bin`。
+以 `hadoop` 在 NameNode 按[仓库首页的命令](../README.md#快速启动)克隆仓库并进入项目目录。在三台分别下载并解压 [Hadoop 3.2.0 发行包](https://archive.apache.org/dist/hadoop/common/hadoop-3.2.0/) 到 `~/hadoop-3.2.0`。NameNode 额外将 [Spark 3.1.2 Hadoop 3.2 发行包](https://archive.apache.org/dist/spark/spark-3.1.2/) 解压到 `~/spark-3.1.2-bin-hadoop3.2`，将 [Hive 3.1.2 发行包](https://archive.apache.org/dist/hive/hive-3.1.2/) 解压到 `~/software/apache-hive-3.1.2-bin`。
 
 从仓库根目录在 NameNode 执行。确保这些配置只安装到本次新搭建的环境。
 
@@ -125,11 +125,11 @@ HDFS 应报告 2 个在线 DataNode，YARN 应报告 2 个 `RUNNING` 的 NodeMan
 
 ```powershell
 py -3.11 -m venv .venv
-& .\.venv\Scripts\python.exe -m pip install -r dashboard/requirements.txt
+& .\.venv\Scripts\python.exe -m pip install -r dashboard/requirements-cluster.txt
 $env:MOVIELENS_WEBHDFS = 'http://<NameNode-IP>:9870/webhdfs/v1'
 $env:MOVIELENS_DATANODES = '{"datanode1":"<DataNode1-IP>","datanode2":"<DataNode2-IP>"}'
 $env:MOVIELENS_KAFKA_BOOTSTRAP = '<NameNode-IP>:9092'
-& .\.venv\Scripts\python.exe dashboard/app.py --port 5066
+& .\.venv\Scripts\python.exe dashboard/app.py --mode cluster --port 5066
 ```
 
 3. 按 [验收记录](verification.md) 核对关键口径，在自己的机器保留以下运行证据。

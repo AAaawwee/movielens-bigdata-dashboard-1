@@ -10,7 +10,7 @@
   <script defer src="{{ url_for('static', filename='echarts.min.js') }}"></script>
   <script defer src="{{ url_for('static', filename='dashboard.js') }}"></script>
 </head>
-<body>
+<body data-mode="{{ data_mode }}">
   <header class="topbar">
     <div class="wrap topbar-inner">
       <a class="brand" href="#top" aria-label="MovieLens 首页"><span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i></span>MovieLens<span class="brand-divider"></span><span class="brand-product">分析看板</span></a>

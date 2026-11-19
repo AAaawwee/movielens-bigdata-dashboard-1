@@ -1,4 +1,5 @@
 import argparse
+import gzip
 import json
 import os
 import socket
@@ -9,12 +10,11 @@ from threading import Lock
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import ProxyHandler, build_opener
 
-import pyarrow as pa
-import pyarrow.parquet as parquet
 from flask import Flask, jsonify, render_template, request
 
 
 ROOT = Path(__file__).resolve().parent
+SNAPSHOT_FILE = ROOT / "snapshots" / "completed-results.json.gz"
 OFFLINE = "/movie/result/offline"
 RECOMMENDATIONS = "/movie/result/recommendations"
 REALTIME = "/movie/result/realtime/latest.json"
@@ -60,6 +60,9 @@ class WebHDFS:
         return [row for part in self.parts(path, ".json") for row in self.json_lines(part)]
 
     def parquet_rows(self, path, columns=None):
+        import pyarrow as pa
+        import pyarrow.parquet as parquet
+
         return [row for part in self.parts(path, ".parquet")
                 for row in parquet.ParquetFile(pa.BufferReader(self.read(part))).read(
                     columns=columns, use_threads=False).to_pylist()]
@@ -194,28 +197,69 @@ class DashboardData:
                 "stale": source == "cache" or not reachable, "replay_mode": "historical"}
 
 
+class BundledResults:
+    def __init__(self, path):
+        with gzip.open(path, "rt", encoding="utf-8") as stream:
+            snapshot = json.load(stream)
+        if snapshot["schema_version"] != 1:
+            raise ValueError("Unsupported bundled snapshot version")
+        self.responses = snapshot["responses"]
+        self.recommendation_rows = snapshot["recommendations"]
+
+    def offline(self):
+        return {**self.responses["/api/overview"], **self.responses["/api/offline/trend"],
+                "ranking": self.responses["/api/movie/ranking"]["movies"]}
+
+    def hourly(self):
+        return self.responses["/api/offline/hourly"]["hourly"]
+
+    def movie_scores(self):
+        return self.responses["/api/offline/movie-scores"]["movies"]
+
+    def recommendations(self, user_id):
+        return self.recommendation_rows.get(str(user_id), [])
+
+    def realtime(self):
+        return {**self.responses["/api/realtime"], "snapshot_source": "bundled",
+                "kafka_reachable": None, "stale": False}
+
+
 def create_app(config=None):
     app = Flask(__name__)
     app.config.from_mapping(
-        WEBHDFS=os.environ.get("MOVIELENS_WEBHDFS", "http://namenode:9870/webhdfs/v1"),
+        WEBHDFS=os.environ.get("MOVIELENS_WEBHDFS"),
         HDFS_USER=os.environ.get("MOVIELENS_HDFS_USER", "hadoop"),
-        DATANODES=json.loads(os.environ.get("MOVIELENS_DATANODES", '{}')),
+        DATANODES=os.environ.get("MOVIELENS_DATANODES", "{}"),
         KAFKA_BOOTSTRAP=os.environ.get("MOVIELENS_KAFKA_BOOTSTRAP", "namenode:9092"),
         CACHE_FILE=ROOT / ".cache" / "realtime.json",
+        DATA_MODE=os.environ.get("MOVIELENS_MODE"),
+        SNAPSHOT_FILE=SNAPSHOT_FILE,
     )
     app.config.update(config or {})
-    hostname, port = app.config["KAFKA_BOOTSTRAP"].rsplit(":", 1)
-    hdfs_addresses = app.config["DATANODES"]
-    if not hdfs_addresses:
-        hdfs_addresses = {"datanode1": "datanode1", "datanode2": "datanode2"}
-    dashboard = DashboardData(
-        WebHDFS(app.config["WEBHDFS"], app.config["HDFS_USER"], hdfs_addresses),
-        Path(app.config["CACHE_FILE"]), (hostname, int(port)),
-    )
+    mode = app.config["DATA_MODE"] or ("cluster" if app.config["WEBHDFS"] else "snapshot")
+    if mode == "snapshot":
+        dashboard = BundledResults(app.config["SNAPSHOT_FILE"])
+    elif mode == "cluster":
+        try:
+            import pyarrow  # Required for HDFS Parquet reads in cluster mode.
+        except ModuleNotFoundError as error:
+            raise RuntimeError("Install dashboard/requirements-cluster.txt for cluster mode") from error
+        hostname, port = app.config["KAFKA_BOOTSTRAP"].rsplit(":", 1)
+        addresses = app.config["DATANODES"]
+        if isinstance(addresses, str):
+            addresses = json.loads(addresses)
+        hdfs = WebHDFS(
+            app.config["WEBHDFS"] or "http://namenode:9870/webhdfs/v1",
+            app.config["HDFS_USER"],
+            addresses or {"datanode1": "datanode1", "datanode2": "datanode2"},
+        )
+        dashboard = DashboardData(hdfs, Path(app.config["CACHE_FILE"]), (hostname, int(port)))
+    else:
+        raise ValueError("MOVIELENS_MODE must be snapshot or cluster")
 
     @app.get("/")
     def index():
-        return render_template("index.html")
+        return render_template("index.html", data_mode=mode)
 
     @app.get("/api/overview")
     def overview():
@@ -276,5 +320,11 @@ def create_app(config=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MovieLens Flask dashboard")
     parser.add_argument("--port", default=5066, type=int)
+    parser.add_argument("--mode", choices=("snapshot", "cluster"))
     args = parser.parse_args()
-    create_app().run(host="127.0.0.1", port=args.port, debug=False, threaded=True)
+    settings = {"DATA_MODE": args.mode} if args.mode else None
+    try:
+        app = create_app(settings)
+    except (OSError, ValueError, KeyError, RuntimeError) as error:
+        parser.exit(1, f"MovieLens startup failed: {error}\n")
+    app.run(host="127.0.0.1", port=args.port, debug=False, threaded=True)
