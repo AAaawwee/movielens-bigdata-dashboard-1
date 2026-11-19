@@ -2,6 +2,16 @@
 
 使用 Hadoop、Hive、Spark 和 Kafka 处理 MovieLens 1M，以 Flask API 和 ECharts 看板展示离线统计、历史评分回放、低分告警和个性化推荐。
 
+**已有可用集群**可先[克隆仓库](#2-克隆仓库)，再[启动看板](#4-在宿主机启动看板)。**从零复现**请先准备三台虚拟机，再按下方步骤生成 HDFS 结果。
+
+## 环境要求
+
+| 运行位置 | 依赖 |
+| --- | --- |
+| NameNode 与两台 DataNode | Linux、JDK 8、Hadoop 3.2.0、可用的 HDFS 和 YARN。使用 VMware 时，三台虚拟机需在同一 NAT 网络 |
+| NameNode | Spark 3.1.2（Scala 2.12）、Hive 3.1.2、Kafka 3.9.2。复现脚本需要 Bash |
+| 看板宿主机 | Python 3.11、Git、浏览器。可以访问 NameNode 的 WebHDFS 和 DataNode 的 HTTP 端口 |
+
 ## 启动项目
 
 第一次复现按 **准备三台 VM → 生成数据和结果 → 启动看板** 的顺序执行。已有项目集群和 HDFS 结果时，可确认三台 VM 已启动后直接进入 [第 4 步](#4-在宿主机启动看板)。
@@ -29,8 +39,8 @@ export HADOOP_HOME="${HADOOP_HOME:-$HOME/hadoop-3.2.0}"
 在 **NameNode 虚拟机**保留一份仓库，用来执行数据流水线。在 **Windows 宿主机**也克隆一份，用来启动看板。若配置虚拟机时已克隆，直接进入已有目录即可。
 
 ```bash
-git clone https://github.com/AAaawwee/movielens-bigdata-dashboard.git
-cd movielens-bigdata-dashboard
+git clone https://github.com/AAaawwee/movielens-bigdata-dashboard-1.git
+cd movielens-bigdata-dashboard-1
 ```
 
 ### 3. 在 NameNode 生成数据和结果
@@ -82,6 +92,14 @@ export MOVIELENS_KAFKA_BOOTSTRAP='<NameNode-IP>:9092'
 ```
 
 </details>
+
+### 常见启动问题
+
+| 现象 | 检查项 |
+| --- | --- |
+| Windows 找不到 `py -3.11` | 安装 Python 3.11 后重新打开 PowerShell。用 `py -0p` 检查已安装版本 |
+| 看板能打开，统计和推荐接口返回 503 | 确认 WebHDFS 已启用、`MOVIELENS_DATANODES` 包含两个 DataNode，以及第 3 步的 HDFS 产物存在 |
+| 显示 Kafka 不可达，但仍有图和告警 | 看板正在使用最近快照。检查 Kafka 端口及广播地址，详见[部署与复现](docs/deployment.md) |
 
 ## 看板预览
 

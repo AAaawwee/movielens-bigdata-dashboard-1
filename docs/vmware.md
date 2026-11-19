@@ -53,7 +53,7 @@ done
 
 ### 2.2 Hadoop 配置和启动
 
-以 `hadoop` 在 NameNode 执行 `git clone https://github.com/AAaawwee/movielens-bigdata-dashboard.git`，进入仓库目录。在三台分别下载并解压 [Hadoop 3.2.0 发行包](https://archive.apache.org/dist/hadoop/common/hadoop-3.2.0/) 到 `~/hadoop-3.2.0`。NameNode 额外将 [Spark 3.1.2 Hadoop 3.2 发行包](https://archive.apache.org/dist/spark/spark-3.1.2/) 解压到 `~/spark-3.1.2-bin-hadoop3.2`，将 [Hive 3.1.2 发行包](https://archive.apache.org/dist/hive/hive-3.1.2/) 解压到 `~/software/apache-hive-3.1.2-bin`。
+以 `hadoop` 在 NameNode 按[仓库首页的命令](../README.md#2-克隆仓库)克隆仓库并进入项目目录。在三台分别下载并解压 [Hadoop 3.2.0 发行包](https://archive.apache.org/dist/hadoop/common/hadoop-3.2.0/) 到 `~/hadoop-3.2.0`。NameNode 额外将 [Spark 3.1.2 Hadoop 3.2 发行包](https://archive.apache.org/dist/spark/spark-3.1.2/) 解压到 `~/spark-3.1.2-bin-hadoop3.2`，将 [Hive 3.1.2 发行包](https://archive.apache.org/dist/hive/hive-3.1.2/) 解压到 `~/software/apache-hive-3.1.2-bin`。
 
 从仓库根目录在 NameNode 执行。确保这些配置只安装到本次新搭建的环境。
 
